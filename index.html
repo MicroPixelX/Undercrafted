@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undercrafted - Voxel Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="blocker">
+        <div id="instructions">
+            <h1>UNDERCRAFTED</h1>
+            <p>A Voxel Sandbox Game</p>
+            <div class="controls-info">
+                <span><b>WASD</b> Move</span>
+                <span><b>Space</b> Jump</span>
+                <span><b>Mouse</b> Look</span>
+                <span><b>Left Click</b> Break</span>
+                <span><b>Right Click</b> Place</span>
+                <span><b>1-6</b> Select Block</span>
+            </div>
+            <p class="click-start">Click to start</p>
+        </div>
+    </div>
+
+    <div id="crosshair">+</div>
+
+    <div id="hotbar">
+        <div class="hotbar-slot selected" data-slot="0"><span class="block-icon grass"></span><span class="slot-num">1</span></div>
+        <div class="hotbar-slot" data-slot="1"><span class="block-icon dirt"></span><span class="slot-num">2</span></div>
+        <div class="hotbar-slot" data-slot="2"><span class="block-icon stone"></span><span class="slot-num">3</span></div>
+        <div class="hotbar-slot" data-slot="3"><span class="block-icon wood"></span><span class="slot-num">4</span></div>
+        <div class="hotbar-slot" data-slot="4"><span class="block-icon leaves"></span><span class="slot-num">5</span></div>
+        <div class="hotbar-slot" data-slot="5"><span class="block-icon sand"></span><span class="slot-num">6</span></div>
+    </div>
+
+    <div id="debug-info">
+        <span id="fps-counter">FPS: 0</span>
+        <span id="position-info">Pos: 0, 0, 0</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="world.js"></script>
+    <script src="player.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
