@@ -2,6 +2,7 @@ let scene, camera, renderer, world, player, dayNight;
 let prevTime = performance.now();
 let frameCount = 0;
 let fpsTime = 0;
+let gameStarted = false;
 
 function init() {
     scene = new THREE.Scene();
@@ -9,6 +10,7 @@ function init() {
     scene.fog = new THREE.Fog(0x87ceeb, 40, CHUNK_SIZE * RENDER_DISTANCE);
 
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 80, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -22,9 +24,7 @@ function init() {
     world.updateChunks(0, 0);
 
     player = new Player(camera, world);
-    const spawnPos = player.getSpawnPosition();
-    player.position.copy(spawnPos);
-    player.isOnGround = false;
+    player.isLocked = false;
 
     const blocker = document.getElementById('blocker');
     const instructions = document.getElementById('instructions');
@@ -34,8 +34,16 @@ function init() {
     });
 
     document.addEventListener('pointerlockchange', () => {
-        player.isLocked = document.pointerLockElement === renderer.domElement;
-        blocker.style.display = player.isLocked ? 'none' : 'flex';
+        const locked = document.pointerLockElement === renderer.domElement;
+        player.isLocked = locked;
+        blocker.style.display = locked ? 'none' : 'flex';
+        if (locked && !gameStarted) {
+            gameStarted = true;
+            const spawnPos = player.getSpawnPosition();
+            player.position.copy(spawnPos);
+            player.velocity.set(0, 0, 0);
+            player.isOnGround = false;
+        }
     });
 
     window.addEventListener('resize', () => {
@@ -62,11 +70,13 @@ function animate() {
         fpsTime = 0;
     }
 
-    player.update(dt);
+    if (gameStarted) {
+        player.update(dt);
+    }
 
     world.updateChunks(player.position.x, player.position.z);
 
-    dayNight.update(dt, player.position);
+    dayNight.update(dt, !gameStarted ? new THREE.Vector3(0, 30, 0) : player.position);
 
     const pos = player.position;
     document.getElementById('position-info').textContent =
