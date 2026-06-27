@@ -1,4 +1,4 @@
-let scene, camera, renderer, world, player;
+let scene, camera, renderer, world, player, dayNight;
 let prevTime = performance.now();
 let frameCount = 0;
 let fpsTime = 0;
@@ -15,15 +15,7 @@ function init() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0x666666);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(50, 100, 30);
-    scene.add(directionalLight);
-
-    const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x8b6b3e, 0.4);
-    scene.add(hemiLight);
+    dayNight = new DayNightCycle(scene);
 
     world = new World(scene);
 
@@ -73,6 +65,8 @@ function animate() {
     player.update(dt);
 
     world.updateChunks(player.position.x, player.position.z);
+
+    dayNight.update(dt, player.position);
 
     const pos = player.position;
     document.getElementById('position-info').textContent =

@@ -168,3 +168,20 @@ canvas {
     gap: 4px;
     text-shadow: 1px 1px 0 #000;
 }
+
+#night-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 5, 30, 1);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 2s ease;
+}
+
+#time-display {
+    color: #aaddff;
+}
