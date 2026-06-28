@@ -24,6 +24,8 @@ class Player {
         this.mouseDelta = { x: 0, y: 0 };
         this.sensitivity = 0.002;
         this.isLocked = false;
+        this.flying = false;
+        this.flySpeed = 8;
 
         this.initControls();
     }
@@ -34,6 +36,9 @@ class Player {
             if (e.code >= 'Digit1' && e.code <= 'Digit6') {
                 this.selectedSlot = parseInt(e.code.charAt(5)) - 1;
                 this.updateHotbar();
+            }
+            if (e.code === 'KeyF') {
+                this.flying = !this.flying;
             }
         });
         document.addEventListener('keyup', (e) => {
@@ -124,15 +129,30 @@ class Player {
 
         if (moveDir.length() > 0) moveDir.normalize();
 
-        this.velocity.x = moveDir.x * this.speed;
-        this.velocity.z = moveDir.z * this.speed;
+        this.velocity.x = moveDir.x * (this.flying ? this.flySpeed : this.speed);
+        this.velocity.z = moveDir.z * (this.flying ? this.flySpeed : this.speed);
 
-        if (this.keys['Space'] && this.isOnGround) {
+        if (this.flying) {
+            this.velocity.y = 0;
+            if (this.keys['Space']) this.velocity.y = this.flySpeed;
+            if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) this.velocity.y = -this.flySpeed;
+        } else if (this.keys['Space'] && this.isOnGround) {
             this.velocity.y = this.jumpForce;
             this.isOnGround = false;
         }
 
-        this.velocity.y -= this.gravity * dt;
+        if (!this.flying) {
+            this.velocity.y -= this.gravity * dt;
+        } else {
+            const newPosFly = this.position.clone();
+            newPosFly.x += this.velocity.x * dt;
+            newPosFly.y += this.velocity.y * dt;
+            newPosFly.z += this.velocity.z * dt;
+            this.position.copy(newPosFly);
+            this.camera.position.copy(this.position);
+            this.camera.position.y += this.height - 0.2;
+            return;
+        }
 
         const newPos = this.position.clone();
         newPos.x += this.velocity.x * dt;

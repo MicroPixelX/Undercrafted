@@ -81,6 +81,8 @@ function animate() {
     const pos = player.position;
     document.getElementById('position-info').textContent =
         `Pos: ${Math.floor(pos.x)}, ${Math.floor(pos.y)}, ${Math.floor(pos.z)}`;
+    const flightEl = document.getElementById('flight-info');
+    if (flightEl) flightEl.textContent = `Flight: ${player.flying ? 'On' : 'Off'}`;
 
     renderer.render(scene, camera);
 }
