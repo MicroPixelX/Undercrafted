@@ -232,30 +232,20 @@ class World {
         this.chunks = new Map();
         this.noise = new SimplexNoise(42);
         this.materialCache = {};
+        this.texture = createBlockTexture();
         this.createMaterials();
     }
 
     createMaterials() {
-        for (const [type, colors] of Object.entries(BlockColors)) {
-            const t = parseInt(type);
-            if (t === BlockType.WATER) {
-                this.materialCache[t] = new THREE.MeshLambertMaterial({
-                    color: colors.top,
-                    transparent: true,
-                    opacity: 0.6,
-                });
-            } else if (t === BlockType.LEAVES) {
-                this.materialCache[t] = new THREE.MeshLambertMaterial({
-                    color: colors.top,
-                    transparent: true,
-                    opacity: 0.85,
-                });
-            } else {
-                this.materialCache[t] = new THREE.MeshLambertMaterial({
-                    color: colors.top,
-                });
-            }
-        }
+        this.materialCache[BlockType.GRASS] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.DIRT] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.STONE] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.WOOD] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.LEAVES] = createLeavesMaterial(this.texture);
+        this.materialCache[BlockType.SAND] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.BEDROCK] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.SNOW] = createBlockMaterial(this.texture);
+        this.materialCache[BlockType.WATER] = createWaterMaterial(this.texture);
     }
 
     chunkKey(cx, cz) {
@@ -341,23 +331,25 @@ class World {
         const vertices = {};
         const indices = {};
         const normals = {};
+        const uvs = {};
 
-        for (const type of Object.keys(BlockColors)) {
+        for (const type of Object.keys(BlockFaceTextures)) {
             vertices[type] = [];
             indices[type] = [];
             normals[type] = [];
+            uvs[type] = [];
         }
 
         const cx = chunk.cx * CHUNK_SIZE;
         const cz = chunk.cz * CHUNK_SIZE;
 
         const faces = [
-            { dir: [0, 1, 0], corners: [[0,1,1],[1,1,1],[1,1,0],[0,1,0]], normal: [0,1,0], colorKey: 'top' },
-            { dir: [0, -1, 0], corners: [[0,0,0],[1,0,0],[1,0,1],[0,0,1]], normal: [0,-1,0], colorKey: 'bottom' },
-            { dir: [0, 0, 1], corners: [[0,0,1],[1,0,1],[1,1,1],[0,1,1]], normal: [0,0,1], colorKey: 'side' },
-            { dir: [0, 0, -1], corners: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]], normal: [0,0,-1], colorKey: 'side' },
-            { dir: [1, 0, 0], corners: [[1,0,1],[1,0,0],[1,1,0],[1,1,1]], normal: [1,0,0], colorKey: 'side' },
-            { dir: [-1, 0, 0], corners: [[0,0,0],[0,0,1],[0,1,1],[0,1,0]], normal: [-1,0,0], colorKey: 'side' },
+            { dir: [0, 1, 0], corners: [[0,1,1],[1,1,1],[1,1,0],[0,1,0]], normal: [0,1,0], faceKey: 'top', uvOrder: [[0,1],[1,1],[1,0],[0,0]] },
+            { dir: [0, -1, 0], corners: [[0,0,0],[1,0,0],[1,0,1],[0,0,1]], normal: [0,-1,0], faceKey: 'bottom', uvOrder: [[0,0],[1,0],[1,1],[0,1]] },
+            { dir: [0, 0, 1], corners: [[0,0,1],[1,0,1],[1,1,1],[0,1,1]], normal: [0,0,1], faceKey: 'side', uvOrder: [[0,0],[1,0],[1,1],[0,1]] },
+            { dir: [0, 0, -1], corners: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]], normal: [0,0,-1], faceKey: 'side', uvOrder: [[0,0],[1,0],[1,1],[0,1]] },
+            { dir: [1, 0, 0], corners: [[1,0,1],[1,0,0],[1,1,0],[1,1,1]], normal: [1,0,0], faceKey: 'side', uvOrder: [[0,0],[1,0],[1,1],[0,1]] },
+            { dir: [-1, 0, 0], corners: [[0,0,0],[0,0,1],[0,1,1],[0,1,0]], normal: [-1,0,0], faceKey: 'side', uvOrder: [[0,0],[1,0],[1,1],[0,1]] },
         ];
 
         for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -365,6 +357,9 @@ class World {
                 for (let z = 0; z < CHUNK_SIZE; z++) {
                     const block = chunk.getBlock(x, y, z);
                     if (block === BlockType.AIR || block === BlockType.WATER) continue;
+
+                    const faceTextures = BlockFaceTextures[block];
+                    if (!faceTextures) continue;
 
                     for (const face of faces) {
                         const nx = x + face.dir[0];
@@ -383,12 +378,21 @@ class World {
                         const vList = vertices[block];
                         const iList = indices[block];
                         const nList = normals[block];
+                        const uvList = uvs[block];
                         if (!vList) continue;
 
+                        const texType = faceTextures[face.faceKey];
+                        const atlasUV = getAtlasUV(texType);
+
                         const idx = vList.length / 3;
-                        for (const corner of face.corners) {
+                        for (let i = 0; i < face.corners.length; i++) {
+                            const corner = face.corners[i];
                             vList.push(x + corner[0] + cx, y + corner[1], z + corner[2] + cz);
                             nList.push(face.normal[0], face.normal[1], face.normal[2]);
+                            const uvp = face.uvOrder[i];
+                            const u = atlasUV.u0 + uvp[0] * (atlasUV.u1 - atlasUV.u0);
+                            const v = atlasUV.v0 + uvp[1] * (atlasUV.v1 - atlasUV.v0);
+                            uvList.push(u, v);
                         }
                         iList.push(idx, idx + 1, idx + 2, idx, idx + 2, idx + 3);
                     }
@@ -412,6 +416,7 @@ class World {
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
             geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals[type], 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs[type], 2));
             geometry.setIndex(indices[type]);
 
             const material = this.materialCache[t];
@@ -422,6 +427,8 @@ class World {
         const waterVerts = [];
         const waterIndices = [];
         const waterNormals = [];
+        const waterUvs = [];
+        const waterAtlasUV = getAtlasUV(TextureType.WATER);
         for (let x = 0; x < CHUNK_SIZE; x++) {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 for (let y = 0; y < WORLD_HEIGHT; y++) {
@@ -433,6 +440,10 @@ class World {
                             waterVerts.push(x + 1 + cx, y + 0.85, z + 1 + cz);
                             waterVerts.push(x + cx, y + 0.85, z + 1 + cz);
                             waterNormals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
+                            waterUvs.push(waterAtlasUV.u0, waterAtlasUV.v0);
+                            waterUvs.push(waterAtlasUV.u1, waterAtlasUV.v0);
+                            waterUvs.push(waterAtlasUV.u1, waterAtlasUV.v1);
+                            waterUvs.push(waterAtlasUV.u0, waterAtlasUV.v1);
                             waterIndices.push(idx, idx + 1, idx + 2, idx, idx + 2, idx + 3);
                         }
                     }
@@ -444,6 +455,7 @@ class World {
             const waterGeometry = new THREE.BufferGeometry();
             waterGeometry.setAttribute('position', new THREE.Float32BufferAttribute(waterVerts, 3));
             waterGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(waterNormals, 3));
+            waterGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(waterUvs, 2));
             waterGeometry.setIndex(waterIndices);
             const waterMesh = new THREE.Mesh(waterGeometry, this.materialCache[BlockType.WATER]);
             group.add(waterMesh);
@@ -455,7 +467,9 @@ class World {
 
     raycast(origin, direction, maxDist = 8) {
         const step = 0.05;
-        let prevX, prevY, prevZ;
+        let prevX = Math.floor(origin.x);
+        let prevY = Math.floor(origin.y);
+        let prevZ = Math.floor(origin.z);
 
         for (let d = 0; d < maxDist; d += step) {
             const x = Math.floor(origin.x + direction.x * d);

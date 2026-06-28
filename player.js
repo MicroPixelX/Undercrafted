@@ -11,6 +11,9 @@ class Player {
         this.speed = 5;
         this.jumpForce = 8;
         this.gravity = 20;
+        this.canFly = false;
+        this.isFlying = false;
+        this.flySpeed = 10;
         this.selectedSlot = 0;
         this.inventory = [
             BlockType.GRASS,
@@ -24,6 +27,7 @@ class Player {
         this.mouseDelta = { x: 0, y: 0 };
         this.sensitivity = 0.002;
         this.isLocked = false;
+        this.prevOnGround = false;
 
         this.initControls();
     }
@@ -35,12 +39,27 @@ class Player {
                 this.selectedSlot = parseInt(e.code.charAt(5)) - 1;
                 this.updateHotbar();
             }
+            if (e.code === 'Escape' && this.isLocked) {
+                e.preventDefault();
+                if (this.onPause) this.onPause();
+            }
+            if (e.code === 'KeyF' && this.canFly) {
+                e.preventDefault();
+                this.isFlying = !this.isFlying;
+                if (this.isFlying) {
+                    this.velocity.y = 0;
+                    this.gravity = 0;
+                } else {
+                    this.gravity = 20;
+                }
+            }
         });
         document.addEventListener('keyup', (e) => {
             this.keys[e.code] = false;
         });
         document.addEventListener('mousemove', (e) => {
             if (this.isLocked) {
+                const sens = gameSettings ? (gameSettings.sensitivity / 100) : 1;
                 this.mouseDelta.x += e.movementX;
                 this.mouseDelta.y += e.movementY;
             }
@@ -62,7 +81,7 @@ class Player {
     }
 
     updateHotbar() {
-        document.querySelectorAll('.hotbar-slot').forEach((slot, i) => {
+        document.querySelectorAll('.hud-slot').forEach((slot, i) => {
             slot.classList.toggle('selected', i === this.selectedSlot);
         });
     }
@@ -103,8 +122,9 @@ class Player {
     update(dt) {
         if (!this.isLocked) return;
 
-        this.rotation.y -= this.mouseDelta.x * this.sensitivity;
-        this.rotation.x -= this.mouseDelta.y * this.sensitivity;
+        const sens = gameSettings ? (gameSettings.sensitivity / 100) : 1;
+        this.rotation.y -= this.mouseDelta.x * this.sensitivity * sens;
+        this.rotation.x -= this.mouseDelta.y * this.sensitivity * sens;
         this.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.rotation.x));
         this.mouseDelta.x = 0;
         this.mouseDelta.y = 0;
@@ -124,25 +144,43 @@ class Player {
 
         if (moveDir.length() > 0) moveDir.normalize();
 
-        this.velocity.x = moveDir.x * this.speed;
-        this.velocity.z = moveDir.z * this.speed;
+        const currentSpeed = this.isFlying ? this.flySpeed : this.speed;
 
-        if (this.keys['Space'] && this.isOnGround) {
-            this.velocity.y = this.jumpForce;
+        if (this.isFlying) {
+            this.velocity.x = moveDir.x * currentSpeed;
+            this.velocity.z = moveDir.z * currentSpeed;
+            this.velocity.y = 0;
+            if (this.keys['Space']) this.velocity.y = currentSpeed;
+            if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) this.velocity.y = -currentSpeed;
+
+            const newPos = this.position.clone();
+            newPos.x += this.velocity.x * dt;
+            newPos.y += this.velocity.y * dt;
+            newPos.z += this.velocity.z * dt;
+
+            this.position.copy(newPos);
+        } else {
+            this.velocity.x = moveDir.x * currentSpeed;
+            this.velocity.z = moveDir.z * currentSpeed;
+
+            if (this.keys['Space'] && this.isOnGround) {
+                this.velocity.y = this.jumpForce;
+                this.isOnGround = false;
+            }
+
+            this.velocity.y -= this.gravity * dt;
+
             this.isOnGround = false;
+            const newPos = this.position.clone();
+            newPos.x += this.velocity.x * dt;
+            this.collide('x', newPos);
+            newPos.y += this.velocity.y * dt;
+            this.collide('y', newPos);
+            newPos.z += this.velocity.z * dt;
+            this.collide('z', newPos);
+
+            this.position.copy(newPos);
         }
-
-        this.velocity.y -= this.gravity * dt;
-
-        const newPos = this.position.clone();
-        newPos.x += this.velocity.x * dt;
-        this.collide('x', newPos);
-        newPos.y += this.velocity.y * dt;
-        this.collide('y', newPos);
-        newPos.z += this.velocity.z * dt;
-        this.collide('z', newPos);
-
-        this.position.copy(newPos);
 
         if (this.position.y < -10) {
             this.position.y = 40;
