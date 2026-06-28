@@ -27,13 +27,14 @@ class Player {
         this.mouseDelta = { x: 0, y: 0 };
         this.sensitivity = 0.002;
         this.isLocked = false;
-        this.prevOnGround = false;
+        this.onPause = null;
 
+        this._boundHandlers = null;
         this.initControls();
     }
 
     initControls() {
-        document.addEventListener('keydown', (e) => {
+        const onKeyDown = (e) => {
             this.keys[e.code] = true;
             if (e.code >= 'Digit1' && e.code <= 'Digit6') {
                 this.selectedSlot = parseInt(e.code.charAt(5)) - 1;
@@ -53,31 +54,53 @@ class Player {
                     this.gravity = 20;
                 }
             }
-        });
-        document.addEventListener('keyup', (e) => {
+        };
+        const onKeyUp = (e) => {
             this.keys[e.code] = false;
-        });
-        document.addEventListener('mousemove', (e) => {
+        };
+        const onMouseMove = (e) => {
             if (this.isLocked) {
-                const sens = gameSettings ? (gameSettings.sensitivity / 100) : 1;
                 this.mouseDelta.x += e.movementX;
                 this.mouseDelta.y += e.movementY;
             }
-        });
-        document.addEventListener('mousedown', (e) => {
+        };
+        const onMouseDown = (e) => {
             if (this.isLocked) {
                 e.preventDefault();
                 if (e.button === 0) this.breakBlock();
                 if (e.button === 2) this.placeBlock();
             }
-        });
-        document.addEventListener('contextmenu', (e) => e.preventDefault());
-        document.addEventListener('wheel', (e) => {
+        };
+        const onContextMenu = (e) => e.preventDefault();
+        const onWheel = (e) => {
             if (this.isLocked) {
                 this.selectedSlot = ((this.selectedSlot + Math.sign(e.deltaY)) % 6 + 6) % 6;
                 this.updateHotbar();
             }
-        });
+        };
+
+        this._boundHandlers = { onKeyDown, onKeyUp, onMouseMove, onMouseDown, onContextMenu, onWheel };
+
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('contextmenu', onContextMenu);
+        document.addEventListener('wheel', onWheel);
+    }
+
+    dispose() {
+        if (!this._boundHandlers) return;
+        const h = this._boundHandlers;
+        document.removeEventListener('keydown', h.onKeyDown);
+        document.removeEventListener('keyup', h.onKeyUp);
+        document.removeEventListener('mousemove', h.onMouseMove);
+        document.removeEventListener('mousedown', h.onMouseDown);
+        document.removeEventListener('contextmenu', h.onContextMenu);
+        document.removeEventListener('wheel', h.onWheel);
+        this._boundHandlers = null;
+        this.keys = {};
+        this.mouseDelta = { x: 0, y: 0 };
     }
 
     updateHotbar() {
@@ -144,6 +167,7 @@ class Player {
 
         if (moveDir.length() > 0) moveDir.normalize();
 
+        const clampedDt = Math.min(dt, 0.1);
         const currentSpeed = this.isFlying ? this.flySpeed : this.speed;
 
         if (this.isFlying) {
@@ -154,10 +178,11 @@ class Player {
             if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) this.velocity.y = -currentSpeed;
 
             const newPos = this.position.clone();
-            newPos.x += this.velocity.x * dt;
-            newPos.y += this.velocity.y * dt;
-            newPos.z += this.velocity.z * dt;
+            newPos.x += this.velocity.x * clampedDt;
+            newPos.y += this.velocity.y * clampedDt;
+            newPos.z += this.velocity.z * clampedDt;
 
+            this.collideFly(newPos);
             this.position.copy(newPos);
         } else {
             this.velocity.x = moveDir.x * currentSpeed;
@@ -168,15 +193,15 @@ class Player {
                 this.isOnGround = false;
             }
 
-            this.velocity.y -= this.gravity * dt;
+            this.velocity.y -= this.gravity * clampedDt;
 
             this.isOnGround = false;
             const newPos = this.position.clone();
-            newPos.x += this.velocity.x * dt;
+            newPos.x += this.velocity.x * clampedDt;
             this.collide('x', newPos);
-            newPos.y += this.velocity.y * dt;
+            newPos.y += this.velocity.y * clampedDt;
             this.collide('y', newPos);
-            newPos.z += this.velocity.z * dt;
+            newPos.z += this.velocity.z * clampedDt;
             this.collide('z', newPos);
 
             this.position.copy(newPos);
@@ -189,6 +214,53 @@ class Player {
 
         this.camera.position.copy(this.position);
         this.camera.position.y += this.height - 0.2;
+    }
+
+    collideFly(pos) {
+        const pad = 0.001;
+        const minX = pos.x - this.width;
+        const maxX = pos.x + this.width;
+        const minY = pos.y;
+        const maxY = pos.y + this.height;
+        const minZ = pos.z - this.width;
+        const maxZ = pos.z + this.width;
+
+        const startX = Math.floor(minX);
+        const endX = Math.floor(maxX);
+        const startY = Math.floor(minY);
+        const endY = Math.floor(maxY);
+        const startZ = Math.floor(minZ);
+        const endZ = Math.floor(maxZ);
+
+        for (let x = startX; x <= endX; x++) {
+            for (let y = startY; y <= endY; y++) {
+                for (let z = startZ; z <= endZ; z++) {
+                    if (this.world.isBlockSolid(x, y, z)) {
+                        if (maxX > x && minX < x + 1 &&
+                            maxY > y && minY < y + 1 &&
+                            maxZ > z && minZ < z + 1) {
+                            const overlapX = Math.min(maxX - x, x + 1 - minX);
+                            const overlapY = Math.min(maxY - y, y + 1 - minY);
+                            const overlapZ = Math.min(maxZ - z, z + 1 - minZ);
+
+                            if (overlapX <= overlapY && overlapX <= overlapZ) {
+                                if (pos.x > x + 0.5) pos.x = x + 1 + this.width + pad;
+                                else pos.x = x - this.width - pad;
+                                this.velocity.x = 0;
+                            } else if (overlapY <= overlapX && overlapY <= overlapZ) {
+                                if (pos.y > y + 0.5) pos.y = y + 1 + this.height + pad;
+                                else pos.y = y - pad;
+                                this.velocity.y = 0;
+                            } else {
+                                if (pos.z > z + 0.5) pos.z = z + 1 + this.width + pad;
+                                else pos.z = z - this.width - pad;
+                                this.velocity.z = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     collide(axis, pos) {

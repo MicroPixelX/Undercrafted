@@ -1,0 +1,124 @@
+#hud-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#hud-crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 11;
+    pointer-events: none;
+}
+
+#hud-crosshair::before,
+#hud-crosshair::after {
+    content: '';
+    position: absolute;
+    background: #fff;
+    mix-blend-mode: difference;
+}
+
+#hud-crosshair::before {
+    width: 20px;
+    height: 2px;
+    top: -1px;
+    left: -10px;
+}
+
+#hud-crosshair::after {
+    width: 2px;
+    height: 20px;
+    top: -10px;
+    left: -1px;
+}
+
+#hud-hotbar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    z-index: 11;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    border: 2px solid #444;
+}
+
+.hud-slot {
+    width: 44px;
+    height: 44px;
+    border: 2px solid #333;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.hud-slot.selected {
+    border-color: #eee;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.hud-slot-num {
+    position: absolute;
+    top: 1px;
+    left: 3px;
+    font-size: 9px;
+    color: #888;
+    font-family: 'Courier New', monospace;
+}
+
+.hud-block-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 2px;
+}
+
+#hud-debug {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: #fff;
+    font-size: 12px;
+    z-index: 12;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-shadow: 1px 1px 0 #000;
+    font-family: 'Courier New', monospace;
+}
+
+#hud-mode-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #5ba35b;
+    text-shadow: 1px 1px 0 #000;
+    z-index: 12;
+    pointer-events: none;
+}
+
+#hud-seed-display {
+    position: fixed;
+    top: 26px;
+    right: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #888;
+    text-shadow: 1px 1px 0 #000;
+    z-index: 12;
+    pointer-events: none;
+}

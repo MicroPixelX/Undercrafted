@@ -92,7 +92,35 @@ class DayNightCycle {
 
         this.timeDisplay = document.createElement('span');
         this.timeDisplay.id = 'time-display';
-        document.getElementById('debug-info').appendChild(this.timeDisplay);
+        const debugInfo = document.getElementById('debug-info');
+        if (debugInfo) {
+            debugInfo.appendChild(this.timeDisplay);
+        }
+    }
+
+    dispose() {
+        if (this.starOverlay && this.starOverlay.parentNode) {
+            this.starOverlay.parentNode.removeChild(this.starOverlay);
+        }
+        if (this.timeDisplay && this.timeDisplay.parentNode) {
+            this.timeDisplay.parentNode.removeChild(this.timeDisplay);
+        }
+        if (this.scene) {
+            this.scene.remove(this.sunGroup);
+            this.scene.remove(this.moonGroup);
+            this.scene.remove(this.starGroup);
+            this.scene.remove(this.sunLight);
+            this.scene.remove(this.ambientLight);
+            this.scene.remove(this.hemiLight);
+        }
+        if (this.starGroup) {
+            this.stars.geometry.dispose();
+            this.stars.material.dispose();
+        }
+        this.sunMesh.geometry.dispose();
+        this.sunMesh.material.dispose();
+        this.moonMesh.geometry.dispose();
+        this.moonMesh.material.dispose();
     }
 
     getNormalizedTime() {

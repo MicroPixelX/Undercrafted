@@ -282,6 +282,28 @@ class World {
         if (lz === CHUNK_SIZE - 1) { const nc = this.getChunkAt(cx, cz + 1); if (nc) nc.dirty = true; }
     }
 
+    dispose() {
+        for (const [key, chunk] of this.chunks) {
+            if (chunk.mesh) {
+                this.scene.remove(chunk.mesh);
+                chunk.mesh.traverse(child => {
+                    if (child.geometry) child.geometry.dispose();
+                });
+                chunk.mesh = null;
+            }
+        }
+        this.chunks.clear();
+        if (this.texture) {
+            this.texture.dispose();
+            this.texture = null;
+        }
+        for (const key of Object.keys(this.materialCache)) {
+            const mat = this.materialCache[key];
+            if (mat) mat.dispose();
+        }
+        this.materialCache = {};
+    }
+
     isBlockSolid(wx, wy, wz) {
         const b = this.getBlock(wx, wy, wz);
         return b !== BlockType.AIR && b !== BlockType.WATER;
@@ -311,7 +333,9 @@ class World {
             if (!neededChunks.has(key)) {
                 if (chunk.mesh) {
                     this.scene.remove(chunk.mesh);
-                    chunk.mesh.geometry.dispose();
+                    chunk.mesh.traverse(child => {
+                        if (child.geometry) child.geometry.dispose();
+                    });
                 }
                 this.chunks.delete(key);
             }
@@ -466,28 +490,64 @@ class World {
     }
 
     raycast(origin, direction, maxDist = 8) {
-        const step = 0.05;
-        let prevX = Math.floor(origin.x);
-        let prevY = Math.floor(origin.y);
-        let prevZ = Math.floor(origin.z);
+        let x = Math.floor(origin.x);
+        let y = Math.floor(origin.y);
+        let z = Math.floor(origin.z);
 
-        for (let d = 0; d < maxDist; d += step) {
-            const x = Math.floor(origin.x + direction.x * d);
-            const y = Math.floor(origin.y + direction.y * d);
-            const z = Math.floor(origin.z + direction.z * d);
+        const stepX = direction.x > 0 ? 1 : -1;
+        const stepY = direction.y > 0 ? 1 : -1;
+        const stepZ = direction.z > 0 ? 1 : -1;
 
-            if (x !== prevX || y !== prevY || z !== prevZ) {
-                const block = this.getBlock(x, y, z);
-                if (block !== BlockType.AIR && block !== BlockType.WATER) {
-                    return {
-                        position: { x, y, z },
-                        previous: { x: prevX, y: prevY, z: prevZ },
-                        blockType: block,
-                    };
+        const tDeltaX = direction.x !== 0 ? Math.abs(1 / direction.x) : Infinity;
+        const tDeltaY = direction.y !== 0 ? Math.abs(1 / direction.y) : Infinity;
+        const tDeltaZ = direction.z !== 0 ? Math.abs(1 / direction.z) : Infinity;
+
+        let tMaxX = direction.x !== 0
+            ? ((direction.x > 0 ? (x + 1 - origin.x) : (origin.x - x)) * tDeltaX)
+            : Infinity;
+        let tMaxY = direction.y !== 0
+            ? ((direction.y > 0 ? (y + 1 - origin.y) : (origin.y - y)) * tDeltaY)
+            : Infinity;
+        let tMaxZ = direction.z !== 0
+            ? ((direction.z > 0 ? (z + 1 - origin.z) : (origin.z - z)) * tDeltaZ)
+            : Infinity;
+
+        let prevX = x, prevY = y, prevZ = z;
+
+        for (let i = 0; i < maxDist * 3; i++) {
+            const block = this.getBlock(x, y, z);
+            if (block !== BlockType.AIR && block !== BlockType.WATER) {
+                return {
+                    position: { x, y, z },
+                    previous: { x: prevX, y: prevY, z: prevZ },
+                    blockType: block,
+                };
+            }
+
+            prevX = x;
+            prevY = y;
+            prevZ = z;
+
+            if (tMaxX < tMaxY) {
+                if (tMaxX < tMaxZ) {
+                    if (tMaxX > maxDist) break;
+                    x += stepX;
+                    tMaxX += tDeltaX;
+                } else {
+                    if (tMaxZ > maxDist) break;
+                    z += stepZ;
+                    tMaxZ += tDeltaZ;
                 }
-                prevX = x;
-                prevY = y;
-                prevZ = z;
+            } else {
+                if (tMaxY < tMaxZ) {
+                    if (tMaxY > maxDist) break;
+                    y += stepY;
+                    tMaxY += tDeltaY;
+                } else {
+                    if (tMaxZ > maxDist) break;
+                    z += stepZ;
+                    tMaxZ += tDeltaZ;
+                }
             }
         }
         return null;

@@ -1,0 +1,59 @@
+.mc-btn {
+    position: relative;
+    display: inline-block;
+    width: 340px;
+    padding: 0;
+    margin: 4px 0;
+    background: #555555;
+    border: 3px solid;
+    border-color: #6b6b6b #3a3a3a #3a3a3a #6b6b6b;
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 40px;
+    cursor: pointer;
+    text-shadow: 2px 2px 0 #333;
+    user-select: none;
+    letter-spacing: 1px;
+    transition: none;
+}
+
+.mc-btn:hover {
+    background: #666666;
+    border-color: #7a7a7a #4a4a4a #4a4a4a #7a7a7a;
+    color: #ffffaa;
+    text-shadow: 2px 2px 0 #444;
+}
+
+.mc-btn:active {
+    background: #444444;
+    border-color: #3a3a3a #6b6b6b #6b6b6b #3a3a3a;
+}
+
+.mc-btn.active {
+    background: #5a7a3a;
+    border-color: #7a9a5a #4a6a2a #4a6a2a #7a9a5a;
+    color: #ffffff;
+}
+
+.mc-btn.small {
+    width: 160px;
+    font-size: 14px;
+    line-height: 36px;
+}
+
+.mc-btn.half {
+    width: 164px;
+}
+
+.mc-btn-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.mc-btn-icon {
+    margin-right: 8px;
+}
