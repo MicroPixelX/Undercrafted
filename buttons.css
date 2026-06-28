@@ -45,7 +45,14 @@
 }
 
 .mc-btn.half {
-    width: 164px;
+    width: 196px;
+}
+
+.mc-btn.large {
+    width: 400px;
+    font-size: 18px;
+    line-height: 48px;
+    letter-spacing: 2px;
 }
 
 .mc-btn-row {

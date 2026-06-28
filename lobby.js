@@ -1,3 +1,36 @@
+const SPLASHES = [
+    'Also try Minecraft!',
+    'Voxels inside!',
+    'Now with trees!',
+    '100% JavaScript!',
+    'Place blocks!',
+    'Break blocks too!',
+    'Infinite worlds!',
+    'Day and night!',
+    'Try Creative mode!',
+    'Now with gravity!',
+    'Open source!',
+    'Crafting not included!',
+    'Block by block!',
+    'Mouse not included!',
+    'Water resistant!',
+    'Pixel perfect!',
+    'Needs more cowbell!',
+    'JEB_!',
+    'As seen on TV!',
+    'Limited edition!',
+    'Touch friendly!',
+    'Now with chunks!',
+    'Semantically correct!',
+    'No creepers here!',
+    'Totally not a clone!',
+    'Diggy diggy hole!',
+    'Blocky business!',
+    'Y2K compliant!',
+    '8-bit approved!',
+    'Insert coin!',
+];
+
 class Lobby {
     constructor(onPlay, onSettings) {
         this.onPlay = onPlay;
@@ -15,6 +48,8 @@ class Lobby {
         this.sunLight = null;
         this.hemiLight = null;
         this.animFrame = null;
+        this.splashIndex = Math.floor(Math.random() * SPLASHES.length);
+        this.showingWorldSelect = false;
 
         this.buildDOM();
         this.initPanorama();
@@ -33,64 +68,124 @@ class Lobby {
         vignette.id = 'lobby-vignette';
         screen.appendChild(vignette);
 
-        const content = document.createElement('div');
-        content.id = 'lobby-content';
+        const overlay = document.createElement('div');
+        overlay.id = 'lobby-overlay';
+        screen.appendChild(overlay);
+
+        const logoArea = document.createElement('div');
+        logoArea.id = 'lobby-logo-area';
 
         const title = document.createElement('div');
         title.id = 'lobby-title';
         title.textContent = 'UNDERCRAFTED';
-        content.appendChild(title);
+        logoArea.appendChild(title);
 
-        const subtitle = document.createElement('div');
-        subtitle.id = 'lobby-subtitle';
-        subtitle.textContent = 'A Voxel Sandbox Game';
-        content.appendChild(subtitle);
+        const splash = document.createElement('div');
+        splash.id = 'lobby-splash';
+        splash.textContent = SPLASHES[this.splashIndex];
+        logoArea.appendChild(splash);
 
-        const modePanel = document.createElement('div');
-        modePanel.id = 'lobby-mode-panel';
-        const modeLabel = document.createElement('div');
-        modeLabel.className = 'mode-label';
+        screen.appendChild(logoArea);
+
+        const mainMenu = document.createElement('div');
+        mainMenu.id = 'lobby-main-menu';
+
+        const playBtn = createButton('Singleplayer', () => this.showWorldSelect(), 'large');
+        mainMenu.appendChild(playBtn);
+
+        const bottomRow = document.createElement('div');
+        bottomRow.className = 'mc-btn-row';
+        const settingsBtn = createButton('Settings...', () => {
+            if (this.onSettings) this.onSettings();
+        }, 'half');
+        bottomRow.appendChild(settingsBtn);
+        bottomRow.appendChild(createButton('', () => {}, 'half invisible'));
+        mainMenu.appendChild(bottomRow);
+
+        screen.appendChild(mainMenu);
+
+        const worldSelect = document.createElement('div');
+        worldSelect.id = 'lobby-world-select';
+
+        const worldListPanel = document.createElement('div');
+        worldListPanel.id = 'lobby-world-list-panel';
+
+        const worldList = document.createElement('div');
+        worldList.id = 'lobby-world-list';
+
+        const emptyMsg = document.createElement('div');
+        emptyMsg.id = 'lobby-world-empty';
+        emptyMsg.textContent = 'No worlds yet. Create one below!';
+        worldList.appendChild(emptyMsg);
+
+        worldListPanel.appendChild(worldList);
+        worldSelect.appendChild(worldListPanel);
+
+        const createPanel = document.createElement('div');
+        createPanel.id = 'lobby-create-panel';
+
+        const seedRow = document.createElement('div');
+        seedRow.id = 'lobby-seed-row';
+
+        const seedLabel = document.createElement('span');
+        seedLabel.id = 'lobby-seed-label';
+        seedLabel.textContent = 'Seed:';
+        seedRow.appendChild(seedLabel);
+
+        const seedInput = document.createElement('input');
+        seedInput.id = 'lobby-seed-input';
+        seedInput.type = 'text';
+        seedInput.placeholder = 'Leave empty for random';
+        seedInput.addEventListener('input', (e) => {
+            this.seed = e.target.value;
+        });
+        seedRow.appendChild(seedInput);
+
+        const randomBtn = createButton('\u21BB', () => this.randomizeSeed(), 'small');
+        randomBtn.id = 'lobby-seed-random';
+        seedRow.appendChild(randomBtn);
+
+        createPanel.appendChild(seedRow);
+
+        const modeRow = document.createElement('div');
+        modeRow.id = 'lobby-mode-row';
+        const modeLabel = document.createElement('span');
+        modeLabel.id = 'lobby-mode-label';
         modeLabel.textContent = 'Game Mode:';
-        modePanel.appendChild(modeLabel);
-
+        modeRow.appendChild(modeLabel);
+        const modeRowButtons = document.createElement('div');
+        modeRowButtons.className = 'mc-btn-row';
         const survivalBtn = createButton('Survival', () => this.setMode('survival'), 'half active');
         survivalBtn.id = 'mode-survival';
         const creativeBtn = createButton('Creative', () => this.setMode('creative'), 'half');
         creativeBtn.id = 'mode-creative';
-        modePanel.appendChild(createButtonRow([survivalBtn, creativeBtn]));
-        content.appendChild(modePanel);
+        modeRowButtons.appendChild(survivalBtn);
+        modeRowButtons.appendChild(creativeBtn);
+        modeRow.appendChild(modeRowButtons);
+        createPanel.appendChild(modeRow);
 
-        const seedPanel = document.createElement('div');
-        seedPanel.id = 'lobby-seed-panel';
-        const seedWrapper = document.createElement('div');
-        seedWrapper.id = 'seed-input-wrapper';
-        const seedLabel = document.createElement('label');
-        seedLabel.textContent = 'Seed:';
-        seedLabel.setAttribute('for', 'seed-input');
-        seedWrapper.appendChild(seedLabel);
-        const seedInput = document.createElement('input');
-        seedInput.id = 'seed-input';
-        seedInput.type = 'text';
-        seedInput.placeholder = 'Random';
-        seedInput.addEventListener('input', (e) => {
-            this.seed = e.target.value;
-        });
-        seedWrapper.appendChild(seedInput);
-        const randomBtn = createButton('\u21BB', () => this.randomizeSeed(), 'small');
-        randomBtn.id = 'seed-random-btn';
-        seedWrapper.appendChild(randomBtn);
-        seedPanel.appendChild(seedWrapper);
-        content.appendChild(seedPanel);
+        worldSelect.appendChild(createPanel);
 
-        const menuButtons = document.createElement('div');
-        menuButtons.id = 'lobby-menu-buttons';
-        const playBtn = createButton('Singleplayer', () => this.startGame(), '');
-        menuButtons.appendChild(playBtn);
-        const settingsBtn = createButton('Settings...', () => { if (this.onSettings) this.onSettings(); }, '');
-        menuButtons.appendChild(settingsBtn);
-        content.appendChild(menuButtons);
+        const worldButtonsRow = document.createElement('div');
+        worldButtonsRow.id = 'lobby-world-buttons';
 
-        screen.appendChild(content);
+        const createWorldBtn = createButton('Create New World', () => this.startGame(), 'large');
+        worldButtonsRow.appendChild(createWorldBtn);
+
+        const cancelRow = document.createElement('div');
+        cancelRow.className = 'mc-btn-row';
+        const cancelBtn = createButton('Cancel', () => this.hideWorldSelect(), 'half');
+        cancelRow.appendChild(cancelBtn);
+        cancelRow.appendChild(createButton('', () => {}, 'half invisible'));
+        worldButtonsRow.appendChild(cancelRow);
+
+        worldSelect.appendChild(worldButtonsRow);
+
+        screen.appendChild(worldSelect);
+
+        const dirtBanner = document.createElement('div');
+        dirtBanner.id = 'lobby-dirt-banner';
+        screen.appendChild(dirtBanner);
 
         const version = document.createElement('div');
         version.id = 'lobby-version';
@@ -102,14 +197,44 @@ class Lobby {
         copyright.textContent = '\u00A9 MicroPixelX';
         screen.appendChild(copyright);
 
-        const hint = document.createElement('div');
-        hint.id = 'lobby-panorama-hint';
-        hint.textContent = 'World rotates in background';
-        screen.appendChild(hint);
-
         this.screen = screen;
+        this.splashEl = splash;
+        this.mainMenu = mainMenu;
+        this.worldSelect = worldSelect;
         this.modeButtons = { survival: survivalBtn, creative: creativeBtn };
         document.body.appendChild(screen);
+
+        this._splashInterval = setInterval(() => {
+            this.splashIndex = (this.splashIndex + 1) % SPLASHES.length;
+            if (this.splashEl) {
+                this.splashEl.style.opacity = '0';
+                this.splashEl.style.transform = 'rotate(-15deg) scale(0.8)';
+                setTimeout(() => {
+                    if (this.splashEl) {
+                        this.splashEl.textContent = SPLASHES[this.splashIndex];
+                        this.splashEl.style.opacity = '1';
+                        this.splashEl.style.transform = 'rotate(-15deg) scale(1.2)';
+                        setTimeout(() => {
+                            if (this.splashEl) {
+                                this.splashEl.style.transform = 'rotate(-15deg) scale(1)';
+                            }
+                        }, 150);
+                    }
+                }, 200);
+            }
+        }, 5000);
+    }
+
+    showWorldSelect() {
+        this.showingWorldSelect = true;
+        this.mainMenu.style.display = 'none';
+        this.worldSelect.style.display = 'flex';
+    }
+
+    hideWorldSelect() {
+        this.showingWorldSelect = false;
+        this.mainMenu.style.display = 'flex';
+        this.worldSelect.style.display = 'none';
     }
 
     setMode(mode) {
@@ -124,8 +249,20 @@ class Lobby {
         for (let i = 0; i < 12; i++) {
             seed += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-        document.getElementById('seed-input').value = seed;
+        const input = document.getElementById('lobby-seed-input');
+        if (input) input.value = seed;
         this.seed = seed;
+    }
+
+    startGame() {
+        const seedValue = this.getSeedValue();
+        this.destroy();
+        if (this.onPlay) {
+            this.onPlay({
+                seed: seedValue,
+                mode: this.mode,
+            });
+        }
     }
 
     getSeedValue() {
@@ -148,10 +285,10 @@ class Lobby {
     initPanorama() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87ceeb);
-        this.scene.fog = new THREE.Fog(0x87ceeb, 10, 60);
+        this.scene.fog = new THREE.Fog(0x87ceeb, 20, 80);
 
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
-        this.camera.position.set(0, 30, 0);
+        this.camera.position.set(0, 28, 25);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: false });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -181,17 +318,17 @@ class Lobby {
             if (!this.active) return;
             this.animFrame = requestAnimationFrame(animate);
 
-            this.rotationAngle += 0.001;
-            const radius = 0;
+            this.rotationAngle += 0.0015;
+
+            const radius = 25;
             const camX = Math.sin(this.rotationAngle) * radius;
             const camZ = Math.cos(this.rotationAngle) * radius;
 
             this.camera.position.x = camX;
             this.camera.position.z = camZ;
-            this.camera.position.y = 32 + Math.sin(this.rotationAngle * 0.3) * 2;
+            this.camera.position.y = 30 + Math.sin(this.rotationAngle * 0.3) * 4;
 
-            this.camera.rotation.y = this.rotationAngle;
-            this.camera.rotation.x = -0.25 + Math.sin(this.rotationAngle * 0.5) * 0.05;
+            this.camera.lookAt(0, 22, 0);
 
             this.sunLight.position.x = 40 * Math.cos(this.rotationAngle * 0.2);
             this.sunLight.position.z = 40 * Math.sin(this.rotationAngle * 0.2);
@@ -209,19 +346,12 @@ class Lobby {
         window.addEventListener('resize', this._resizeHandler);
     }
 
-    startGame() {
-        const seedValue = this.getSeedValue();
-        this.destroy();
-        if (this.onPlay) {
-            this.onPlay({
-                seed: seedValue,
-                mode: this.mode,
-            });
-        }
-    }
-
     destroy() {
         this.active = false;
+        if (this._splashInterval) {
+            clearInterval(this._splashInterval);
+            this._splashInterval = null;
+        }
         if (this.animFrame) cancelAnimationFrame(this.animFrame);
         if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
         if (this.renderer) {
