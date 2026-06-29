@@ -341,13 +341,17 @@ class World {
             }
         }
 
-        let rebuilt = 0;
-        for (const [key, chunk] of this.chunks) {
-            if (chunk.dirty && rebuilt < 3) {
-                this.buildChunkMesh(chunk);
-                chunk.dirty = false;
-                rebuilt++;
-            }
+        // Build chunks nearest to player first for faster visible area loading
+        const sortedChunks = Array.from(this.chunks.values())
+            .filter(c => c.dirty)
+            .sort((a, b) => {
+                const da = Math.hypot(a.cx - pcx, a.cz - pcz);
+                const db = Math.hypot(b.cx - pcx, b.cz - pcz);
+                return da - db;
+            });
+        for (let i = 0; i < sortedChunks.length && i < 6; i++) {
+            this.buildChunkMesh(sortedChunks[i]);
+            sortedChunks[i].dirty = false;
         }
     }
 
